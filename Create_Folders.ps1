@@ -1,3 +1,4 @@
+
 function New-DemoData ($Path, $folder) 
 { 
   # This script will create 10 folders, at the target path (provided by the Path parameter)  ie: 2013.01.01
@@ -15,9 +16,10 @@ function New-DemoData ($Path, $folder)
     foreach($file in Get-ChildItem -path "$path\$Folder.0$_.0$_") 
     #{write-host $file.Fullname}
     {$(Get-Item $file.Fullname).lastwritetime="$Folder.0$_.0$_"}
+    {$(Get-Item $file.Fullname).LastAccessTime="$Folder.0$_.0$_"}
   } 
   Pop-Location 
 }
 
-New-DemoData 'C:\Users\PUTRTEK\Downloads\PowerShell\ZipScript\reports' '2013'
+New-DemoData 'C:\Users\PUTRTEK\Downloads\PowerShell\ZipScript\reports' '2018'
 
