@@ -6,7 +6,7 @@ function New-DemoData ($Path, $folder)
   # It will also set the LastWriiten date to the folder name
   # Usage: New-DemoData 'D:\Company' '2013'
   Push-Location 
-  1..9 | % { #write-host "$path\$Folder.0$_.0$_"
+  1..9 | ForEach-Object { #write-host "$path\$Folder.0$_.0$_"
     Set-Location -Path (New-Item -ItemType directory -path "$path\$Folder.0$_.0$_").fullname -ErrorAction SilentlyContinue 
   for ( $i=1; $i -le (Get-Random -Minimum 10 -Maximum 200); $i++ ) 
     { 
