@@ -96,7 +96,7 @@
     {
 	  #   try{
                 # Determine what files to archive
-                  $AllFilesCount = $(get-childitem $SourcePath -Filter $Extension -Recurse | Where {$_.LastWriteTime -lt $CutDay} |tee -Variable Files | measure).Count
+                  $AllFilesCount = $(get-childitem $SourcePath -Filter $Extension -Recurse | Where-Object {$_.LastWriteTime -lt $CutDay} |tee -Variable Files | measure).Count
 	            # Compress-Archive  -Path $Files -DestinationPath $ZiPDestination\$($ZipName).zip -CompressionLevel Optimal -Verbose
                
 	        }# End try

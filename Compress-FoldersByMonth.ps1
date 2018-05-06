@@ -94,9 +94,9 @@ Function Compress-FilesByMonth ()
 	 try{
 	    # Determine what files to archive
         $MyArray = @()
-	    $AllFilesCount = $(get-childitem $SourcePath -Filter $Extension -Recurse | Where {$_.LastWriteTime -lt $CutDay} |tee -Variable Files | measure).Count
-	    $Files | %{ # get Month and Year of Files in the Array $Files
-            $temp='' | Select Filename, period
+	    $AllFilesCount = $(get-childitem $SourcePath -Filter $Extension -Recurse | Where-Object {$_.LastWriteTime -lt $CutDay} |Tee-Object -Variable Files | measure).Count
+	    $Files | ForEach-Object{ # get Month and Year of Files in the Array $Files
+            $temp='' | Select-Object Filename, period
             $temp.Filename = $_.Fullname
             $temp.Period = '{0:yyyMM}' -f $_.LastWriteTime 
             $MyArray+=$temp
@@ -105,22 +105,22 @@ Function Compress-FilesByMonth ()
         #############################################################################################	         
         if ($MyArray -ne $null)
         {
-            foreach($period in ($MyArray | select Period -Unique))
+            foreach($period in ($MyArray | Select-Object Period -Unique))
             {
                 write-host -f Yellow "#############################=- Processing Files for $($period.Period) Creating ZIP file : $ZiPDestination\$($ZipName)_$($Period.Period).zip -=###############################"
-                $MyArray | ?{$_.Period -eq $period.Period} | select -expand Filename | Out-File .\FileList.TXT -Encoding ASCII
+                $MyArray | Where-Object{$_.Period -eq $period.Period} | Select-Object -expand Filename | Out-File .\FileList.TXT -Encoding ASCII
                # gc .\FileList.TXT
-               Compress-Archive  -Path (gc .\FileList.TXT) -DestinationPath $ZiPDestination\$($ZipName)_$($Period.Period).zip -CompressionLevel Optimal -Verbose
+               Compress-Archive  -Path (Get-Content .\FileList.TXT) -DestinationPath $ZiPDestination\$($ZipName)_$($Period.Period).zip -CompressionLevel Optimal -Verbose
                # now that the files have been added to the zip we can delete the file.
-               gc .\FileList.TXT | Remove-Item  -Verbose
+               Get-Content .\FileList.TXT | Remove-Item  -Verbose
             }
 
             #############################################################################################>
             #############################################################################################
             # Now lets go back and delete the empty folders we just created
              write-host -f Yellow "#############################=- Delete Empty Directoties -=###############################"
-            $dirs = get-childitem $SourcePath -Directory -Recurse | Where {(get-childitem $_.Fullname).count -eq 0 } | Select -expand fullname
-            $dirs | foreach{remove-item $_ -Force -Verbose}
+            $dirs = get-childitem $SourcePath -Directory -Recurse | Where-Object {(get-childitem $_.Fullname).count -eq 0 } | Select-Object -expand fullname
+            $dirs | ForEach-Object{remove-item $_ -Force -Verbose}
             #############################################################################################>
         }
         Write-Host -F Green "processed $AllFilesCount Files that were older then $CutDay"
