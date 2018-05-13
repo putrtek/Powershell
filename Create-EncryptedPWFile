@@ -1,0 +1,11 @@
+$user = "Domain\testautouser"
+$passwdFile = "$env:USERPROFILE\myscript-$user"
+if ((Test-Path $passwdFile) -eq $false) {
+  $cred = new-object system.management.automation.pscredential $user,
+        (read-host -assecurestring -prompt "Enter a password:")
+    $cred.Password | ConvertFrom-SecureString | Set-Content $passwdFile
+}
+else {
+  $cred = new-object system.management.automation.pscredential $user,
+        (Get-Content $passwdFile | ConvertTo-SecureString)
+}
