@@ -1,4 +1,4 @@
-﻿                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         #************RUN AS ADMINISTRATOR****************
+﻿<#                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         #************RUN AS ADMINISTRATOR****************
 If (-NOT ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole] "Administrator"))
 {   
 #"No Administrative rights, it will display a popup window asking user for Admin rights"
@@ -7,17 +7,13 @@ Start-Process "$psHome\powershell.exe" -Verb runAs -ArgumentList $arguments
 break
 }
 
-
+#>
 
 
 
 # get operating dir for the script
 $ScriptDir = Split-Path $script:MyInvocation.mycommand.path
 
-# Import Modules
-Import-Module -Name Microsoft.Powershell.Security
-Import-Module Webadministration
-Import-Module $ScriptDir\checks.psm1
 
 # Import Ckl
 $checklistPath = "$ScriptDir\empty_IIS_Site.ckl"
@@ -27,28 +23,20 @@ $stigdata = $ckl.childnodes.stigs.istig.vuln.stig_data
 foreach($a in $stigdata){
     #$a.ParentNode.STIG_DATA
 }
-
+#>
 
 
 # Computername
-$computer = 'snnsvr142'  #<--------- Change This
+$computer = $Env:COMPUTERNAME  #<--------- Change This
 
 # Checklist output directory
-$saveDirectory = "\\snnsvr012\Code 1230\Code 109.33\Cyber Security\STIGs\IIS-Site-STIG-Check-master\$computer\"
+$saveDirectory = "C:\Users\putrt\Downloads\STIG\$computer\"
 
 # create hastable for export later
 $exportTable = @()
 
-# Gets registry key values
-
-
-
-
-#function Set-RuleStatus{}
-
-
 write-host "start new session"
-$session = New-PSSession -ComputerName $computer -Credential nnsy\nn081765wa 
+$session = New-PSSession -ComputerName $computer -Credential DESKTOP-BVRO3S4\putrtek
 
 
 write-host "Invoke commands under new session"
@@ -57,11 +45,12 @@ Invoke-Command -Session $session  -ScriptBlock {
 
 # gets the imported module for use by script
 write-host "Get modules"
-$modules = Get-Module | Where-Object {$_.moduletype -eq 'Script' -and $_.name -like 'checks*'}
+$modules = Get-Module | Where-Object {$_.moduletype -eq 'Script' -and $_.name -like 'IIS7-Site*'}
 
 # gets all the commands in the module
 write-host "Get command list"
 $commandlist = $modules.ExportedCommands.values.name | Where-Object {$_ -like 'Get-*'}
+$commandlist
 
     foreach($command in $commandlist)
     {
@@ -103,3 +92,6 @@ if($testPath -eq $false){
 # Save the .ckl file with the type of checklist and the computername
 $ckl.Save($saveDirectory+ $computer + "_IIS_Site.ckl")
 
+#>
+
+$returnObject

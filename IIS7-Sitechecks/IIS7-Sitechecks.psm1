@@ -72,7 +72,7 @@ function Get-13620 ()
     Import-Module WebAdministration
 
     # get list of sites
-    $sites = Get-Website
+    #$sites = Get-Website
 
     # get ssl bindings 
     $sslSites = Get-ChildItem IIS:\SslBindings | Where-Object {$_.port -eq '443'} 
