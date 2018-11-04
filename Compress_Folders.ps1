@@ -92,7 +92,7 @@
 
 	    # 10..20 | % {New-Item -Name SQLServerTrace$_.trc -ItemType File}
 	} # End Begin
-	process 
+#process 
     {
 	  #   try{
                 # Determine what files to archive

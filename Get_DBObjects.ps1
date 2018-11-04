@@ -2,27 +2,24 @@ Function Get-DBObjectsIntoFolder ()
 {
 <#
             .SYNOPSIS
-                Put your synopsis here
+                Create TSQL script for all object in a database 
              .DESCRIPTION
-                Put your Description here...
+                Create TSQL script for all object in a database 
             .EXAMPLE
-                Eamples goes here...
+               Get-DBObjectsIntoFolder -server $server -dbname $dbname -DestinationPath $DestinationPath
             .NOTES
                           AUTHOR  : Mark Buckley (mark.c.buckley@navy.mil) 757.396.8821
-                     Create DATE  : 05-22-2014
-              Last Modified DATE  : 07-02-2014
-            .REQUIRES : This script must be run on a box that has SQL Server Management tools loaded
+                     Create DATE  : 11-04-2018
+              Last Modified DATE  : 11-04-2018
+            .REQUIRES : This script must be run on a box that has SQLServer powershell module loaded
 #>
 
 
 [CmdletBinding(ConfirmImpact="Low")] 
     param(
-        [Parameter(Mandatory = $true)][string] $server, # Folder where files to be zipped are located 
-        [Parameter(Mandatory = $true)][string] $dbname,
-        [Parameter(Mandatory = $true)][INT]    $DestinationPath # Number of months back to start Archive
-          #  [Parameter(Mandatory = $true)][string] $Extension,  # Extention to filter by
-          #  [Parameter(Mandatory = $true)][BOOL]   $Delete # Should original files be deleted?
-
+        [Parameter(Mandatory = $true)][string] $ServerName, # Name of the SQL server to Script out
+        [Parameter(Mandatory = $false)][string] $dbname, # Leave BLANK to Script ALL Databases on the server
+        [Parameter(Mandatory = $true)][string] $DestinationPath # Where to put scripts
     ) # end PARAM
     begin 
             {
@@ -37,31 +34,27 @@ Function Get-DBObjectsIntoFolder ()
                     $OutputType = 0 # 0 will output to Screen; 1 will output to Log File (sendlog function)
                     #############################################################################################>
                     # Load Powershell Logging Module if it is not loaded already...
-                     If(!(Get-Module PowerShellLogging )) { Import-Module powershellLogging}
+                    If(!(Get-Module PowerShellLogging )) { Import-Module powershellLogging}
                     ###########=~ Set Log File Values Here ~=#####################################################
                     $LogFilePath = ".\Logs\" #store logs in a local folder called 'Logs' 
-                    $LogName = "$($server)_$dbname"
+                    $LogName = "$($ServerName)_$dbname"
                     $LogFileDir = "$LogFilePath$LogName\"
                     $LogFileName = "$($LogName)_$((Get-Date).tostring("yyyy.MM.dd"))"
                     $LogFileExt = ".txt"
                     $LogFileFullPath = "$LogFileDir$LogFileName$LogFileExt"
-                   # $LogFile = Enable-LogFile -Path $LogFileFullPath # Turn ON logging
+                    $LogFile = Enable-LogFile -Path $LogFileFullPath # Turn ON logging
                     ########=~ Script configuration Ends here ~=#################################################
                     #############################################################################################> 
                      # Load Sql.SMO dll    
                     [System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO") | out-null
                     $SMOserver = New-Object ('Microsoft.SqlServer.Management.Smo.Server') -argumentlist $server
-                    $db = $SMOserver.databases[$dbname]
-                        $Objects = $db.Tables
-                        $Objects += $db.Views
-                        $Objects += $db.StoredProcedures
-                        $Objects += $db.UserDefinedFunctions
-
-                    # Create Folders
-                    $SavePath = "$DestinationPath\$($server)\$LogFileName"
+                    $SMOserver.ConnectionContext.LoginSecure=$false; 
+                    $SMOserver.ConnectionContext.set_Login('sa'); 
+                    $SMOserver.ConnectionContext.set_Password('Pa$$w)rd123') 
+                    $IncludeTypes = @("Tables","StoredProcedures","Views","UserDefinedFunctions", "Triggers") #objects you want do script. 
+                    $ExcludeSchemas = @("sys","Information_Schema")
+                    $so = new-object ('Microsoft.SqlServer.Management.Smo.ScriptingOptions')
                     
-                   # new-item -type directory -path "$SavePath"    
-              
                 } # End Begin
             process 
             {
@@ -77,15 +70,41 @@ Function Get-DBObjectsIntoFolder ()
                         Write-Debug " - LogFileName: $LogFileName"
                         Write-Debug " - DestinationPath: $DestinationPath"
                         Write-Debug " - LogFileFullPath: $LogFileFullPath"
-                        Write-Debug " - SavePath: $SavePath"
-                        Write-Debug " - Server: $Server"
+                        Write-Debug " - Server: $ServerName"
                         Write-Debug " - dbname: $dbname"
-                      #  Write-Host -f Green "Hours: $Hours "
-                      #  Write-Host -f Green "CutDay: $CutDay " 
                     }
                   ########################################################################
-                    ##  CODE GOES HERE ##
-                  ########################################################################   
+                  if(!$dbname){$dbs = $SMOserver.databases} else {$dbs=$SMOserver.Databases[$dbname]} #you can change this variable for a query for filter your databases.
+                    foreach ($db in $dbs)
+                    {
+                        $dbname = "$db".replace("[","").replace("]","")
+                        $dbpath = "$DestinationPath"+ "\"+"$dbname" + "\"
+
+                        write-host -f cyan "Scritping $dbpath"
+
+                        if ( !(Test-Path $dbpath))
+                        {$null=new-item -type directory -name "$dbname"-path "$DestinationPath" -Force}
+
+
+                    foreach ($Type in $IncludeTypes)
+                    {
+                        $objpath = "$dbpath" + "$Type" + "\"
+                        write-host -f Green "  Scritping $objpath"
+                    if ( !(Test-Path $objpath))
+                        {$null=new-item -type directory -name "$Type"-path "$dbpath"}
+                        foreach ($objs in $db.$Type)
+                        {
+                                If ($ExcludeSchemas -notcontains $objs.Schema ) 
+                                {
+                                        $ObjName = "$objs".replace("[","").replace("]","")                  
+                                        $OutFile = "$objpath" + "$ObjName" + ".sql"
+                                        write-host -f yellow "    Creating file $OutFile"
+                                        $objs.Script($so)+"GO" | out-File $OutFile
+                                }
+                        }
+                    }     
+                }
+                  ########################################################################>   
                 } # End try
                 Catch
                 {
@@ -101,15 +120,12 @@ Function Get-DBObjectsIntoFolder ()
                 } # End Catch
                 finally
                 { Write-Host -F Green "***** Script Complete - Time to complete: $($stopwatch.Elapsed) *****"}
-             #   $LogFile | Disable-LogFile # Turn OFF logging #>      
-
-
+                $LogFile | Disable-LogFile # Turn OFF logging #>      
             } # End Process
 } # End Function
 
-
-$SourcePath = "srp-sql"
-$OutputFolder = "srp-Inventory"
-$ZipFileName = "BlahBlah"
+<########################################################################>   
+$server = "putrtek-sql"
+$dbname = "" # Leave BLANK to Script ALL Databases on the server
 $DestinationPath = "C:\Users\putrt\Downloads\powershell\SQL"
-Get-DBObjectsIntoFolder -SourcePath $SourcePath -OutputFolder $OutputFolder -ZipFileName $ZipFileName -DestinationPath $DestinationPath
+Get-DBObjectsIntoFolder -server $server -dbname $dbname -DestinationPath $DestinationPath
