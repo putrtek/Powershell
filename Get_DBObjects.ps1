@@ -1,4 +1,4 @@
-Function Get-BoilerPlate ()
+Function Get-DBObjectsIntoFolder ()
 {
 <#
             .SYNOPSIS
@@ -17,10 +17,9 @@ Function Get-BoilerPlate ()
 
 [CmdletBinding(ConfirmImpact="Low")] 
     param(
-            [Parameter(Mandatory = $true)][string] $SourcePath, # Folder where files to be zipped are located 
-            [Parameter(Mandatory = $true)][string] $OutputFolder, # Folder where Zip file will go to 
-            [Parameter(Mandatory = $true)][string] $ZipFileName # Name to give Zip file
-          # [Parameter(Mandatory = $true)][INT]    $archivemonths, # Number of months back to start Archive
+        [Parameter(Mandatory = $true)][string] $server, # Folder where files to be zipped are located 
+        [Parameter(Mandatory = $true)][string] $dbname,
+        [Parameter(Mandatory = $true)][INT]    $DestinationPath # Number of months back to start Archive
           #  [Parameter(Mandatory = $true)][string] $Extension,  # Extention to filter by
           #  [Parameter(Mandatory = $true)][BOOL]   $Delete # Should original files be deleted?
 
@@ -41,33 +40,49 @@ Function Get-BoilerPlate ()
                      If(!(Get-Module PowerShellLogging )) { Import-Module powershellLogging}
                     ###########=~ Set Log File Values Here ~=#####################################################
                     $LogFilePath = ".\Logs\" #store logs in a local folder called 'Logs' 
-                    $LogName = $ZipName
+                    $LogName = "$($server)_$dbname"
                     $LogFileDir = "$LogFilePath$LogName\"
-                    $LogFileName = "$($LogName)_$((Get-Date).tostring("yyyy.MM.dd.HHmm"))"
+                    $LogFileName = "$($LogName)_$((Get-Date).tostring("yyyy.MM.dd"))"
                     $LogFileExt = ".txt"
                     $LogFileFullPath = "$LogFileDir$LogFileName$LogFileExt"
-                    $LogFile = Enable-LogFile -Path $LogFileFullPath # Turn ON logging
+                   # $LogFile = Enable-LogFile -Path $LogFileFullPath # Turn ON logging
                     ########=~ Script configuration Ends here ~=#################################################
                     #############################################################################################> 
-                    # $CutDay = [DateTime]::Now.AddHours(-$Hours) # Only files OLDER then this date will be archived
-                    If($OutputType -eq 0)
-                    {
-                        Write-Host -F Green "*** Script Start -  - Full Script Path: $path ***"
-                        Write-Host -f Green "SourcePath: $SourcePath "
-                        Write-Host -f Green "OutputFolder: $ZiPDestination "
-                        Write-Host -f Green "ZipFileFullPath: $ZipFileFullPath "
-                        Write-Host -f Green "LogFileFullPath: $LogFileFullPath "
-                        Write-Host -f Green "ZipFileName: $ZipFileName "
-                      #  Write-Host -f Green "Hours: $Hours "
-                      #  Write-Host -f Green "CutDay: $CutDay " 
-                    }
-        
-                    # 10..20 | % {New-Item -Name SQLServerTrace$_.trc -ItemType File}
+                     # Load Sql.SMO dll    
+                    [System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.SMO") | out-null
+                    $SMOserver = New-Object ('Microsoft.SqlServer.Management.Smo.Server') -argumentlist $server
+                    $db = $SMOserver.databases[$dbname]
+                        $Objects = $db.Tables
+                        $Objects += $db.Views
+                        $Objects += $db.StoredProcedures
+                        $Objects += $db.UserDefinedFunctions
+
+                    # Create Folders
+                    $SavePath = "$DestinationPath\$($server)\$LogFileName"
+                    
+                   # new-item -type directory -path "$SavePath"    
+              
                 } # End Begin
             process 
             {
                 try
                 {
+                    If($OutputType -eq 0)
+                    {
+                        Write-Host -F Green "*** Script Start -  - Full Script Path: $path ***"
+                        Write-Debug " - Full Script Path: $path"
+                        Write-Debug " - Script run from Path: $scriptPath"
+                        Write-Debug " - ErrorActionPreference: $ErrorActionPreference"
+                        Write-Debug " - DebugPreference: $DebugPreference"
+                        Write-Debug " - LogFileName: $LogFileName"
+                        Write-Debug " - DestinationPath: $DestinationPath"
+                        Write-Debug " - LogFileFullPath: $LogFileFullPath"
+                        Write-Debug " - SavePath: $SavePath"
+                        Write-Debug " - Server: $Server"
+                        Write-Debug " - dbname: $dbname"
+                      #  Write-Host -f Green "Hours: $Hours "
+                      #  Write-Host -f Green "CutDay: $CutDay " 
+                    }
                   ########################################################################
                     ##  CODE GOES HERE ##
                   ########################################################################   
@@ -86,7 +101,7 @@ Function Get-BoilerPlate ()
                 } # End Catch
                 finally
                 { Write-Host -F Green "***** Script Complete - Time to complete: $($stopwatch.Elapsed) *****"}
-                $LogFile | Disable-LogFile # Turn OFF logging #>      
+             #   $LogFile | Disable-LogFile # Turn OFF logging #>      
 
 
             } # End Process
@@ -96,4 +111,5 @@ Function Get-BoilerPlate ()
 $SourcePath = "srp-sql"
 $OutputFolder = "srp-Inventory"
 $ZipFileName = "BlahBlah"
-Get-BoilerPlate -SourcePath $SourcePath -OutputFolder $OutputFolder -ZipFileName $ZipFileName
+$DestinationPath = "C:\Users\putrt\Downloads\powershell\SQL"
+Get-DBObjectsIntoFolder -SourcePath $SourcePath -OutputFolder $OutputFolder -ZipFileName $ZipFileName -DestinationPath $DestinationPath
